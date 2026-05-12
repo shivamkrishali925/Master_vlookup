@@ -490,11 +490,11 @@ function parseWb(wb) {
     if (raw[i].some(c => typeof c === 'string' && c.trim() !== '')) { hi = i; break; }
   }
   const headers = raw[hi].map((h, j) => String(h ?? '').trim() || ('Column_' + (j+1)));
-  // De-duplicate header names
-  const seen = {};
+  // De-duplicate header names (tracks occurrence counts per name)
+  const headerCounts = {};
   const deduped = headers.map(h => {
-    if (!seen[h]) { seen[h] = 1; return h; }
-    return h + '_' + (++seen[h]);
+    if (!headerCounts[h]) { headerCounts[h] = 1; return h; }
+    return h + '_' + (++headerCounts[h]);
   });
 
   const rows = [];
@@ -605,6 +605,8 @@ function initSeg(groupId) {
 // ═══════════════════════════════════════════════════════════════
 //  MATCHING UTILITIES
 // ═══════════════════════════════════════════════════════════════
+// Wildcard matching: * = any chars, ? = any single char.
+// Use ~ to escape: ~* matches a literal *, ~? matches a literal ?.
 function wildcardRx(pattern) {
   let r = '';
   for (let i = 0; i < pattern.length; i++) {
@@ -861,7 +863,8 @@ function renderTable() {
 // ═══════════════════════════════════════════════════════════════
 function buildExportRows() {
   if (!resultRows.length) return [];
-  const retCols = resultRows[0].retCols ? Object.keys(resultRows[0].rCols) : [];
+  // Use retCols (array of column names) directly rather than re-deriving from rCols keys
+  const retCols = resultRows[0].retCols || [];
   const hdrs = [
     ...file1.headers,
     ...retCols.map(rc => '[Result] ' + rc),
@@ -906,7 +909,9 @@ function dl(filename, content, mime) {
   a.href = URL.createObjectURL(new Blob([content], { type: mime }));
   a.download = filename;
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  // Revoke object URL after a short delay to allow the download to start
+  const URL_REVOKE_DELAY_MS = 10000;
+  setTimeout(() => URL.revokeObjectURL(a.href), URL_REVOKE_DELAY_MS);
 }
 </script>
 </body>
