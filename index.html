@@ -465,7 +465,7 @@ let activeFilter = 'all';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const norm = v => String(v ?? '').trim().toLowerCase();
-const KEY_DELIMITER = '__';
+const KEY_DELIMITER = '\x1F';
 
 // ═══════════════════════════════════════════════════════════════
 //  FILE LOADING
@@ -740,7 +740,7 @@ function runLookup() {
 
   if (!retCols.length) { alert('Please select at least one return column.'); return; }
   if ((lkCol1b && !lkCol2b) || (!lkCol1b && lkCol2b)) {
-    alert('Select both secondary lookup columns (File 1 and File 2) or leave both as None.');
+    alert('Select both secondary lookup columns or leave both as None.');
     return;
   }
   const hasSecondary = !!(lkCol1b && lkCol2b);
