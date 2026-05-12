@@ -465,11 +465,8 @@ let activeFilter = 'all';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const norm = v => String(v ?? '').trim().toLowerCase();
-const KEY_DELIMITER = '\x1F';
-const buildLookupKey = (primaryVal, secondaryVal, hasSecondary) =>
-  hasSecondary
-    ? `${norm(primaryVal)}${KEY_DELIMITER}${norm(secondaryVal)}`
-    : norm(primaryVal);
+const buildLookupKey = (primaryNorm, secondaryNorm, hasSecondary) =>
+  hasSecondary ? JSON.stringify([primaryNorm, secondaryNorm]) : primaryNorm;
 
 // ═══════════════════════════════════════════════════════════════
 //  FILE LOADING
@@ -502,6 +499,7 @@ function loadFile(e, num) {
 
 function parseWb(wb) {
   const ws  = wb.Sheets[wb.SheetNames[0]];
+  // Keep displayed date strings (yyyy-mm-dd) instead of raw Excel serial values.
   const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:false, dateNF:'yyyy-mm-dd' });
   if (!raw.length) return { headers:[], rows:[] };
 
@@ -743,7 +741,7 @@ function runLookup() {
   }
 
   if (!retCols.length) { alert('Please select at least one return column.'); return; }
-  if ((lkCol1b && !lkCol2b) || (!lkCol1b && lkCol2b)) {
+  if (!!lkCol1b !== !!lkCol2b) {
     alert('Select both secondary lookup columns or leave both as None.');
     return;
   }
@@ -756,7 +754,7 @@ function runLookup() {
   const f2dupKeys = new Set();
   const f2keyCounts = new Map();
   file2.rows.forEach(r => {
-    const key = buildLookupKey(r[lkCol2], r[lkCol2b], hasSecondary);
+    const key = buildLookupKey(norm(r[lkCol2]), norm(r[lkCol2b]), hasSecondary);
     f2keyCounts.set(key, (f2keyCounts.get(key) || 0) + 1);
   });
   f2keyCounts.forEach((count, key) => { if (count > 1) f2dupKeys.add(key); });
@@ -767,11 +765,11 @@ function runLookup() {
   file1.rows.forEach((f1row, f1i) => {
     const lv     = f1row[lkCol1];
     const lv2    = hasSecondary ? f1row[lkCol1b] : '';
-    const lk     = buildLookupKey(lv, lv2, hasSecondary);
+    const lv2n   = hasSecondary ? norm(lv2) : '';
+    const lk     = buildLookupKey(norm(lv), lv2n, hasSecondary);
     const isDup  = f2dupKeys.has(lk);
     let hits     = findMatches(lv, file2.rows, lkCol2, matchMode, searchMode, idx);
     if (hasSecondary) {
-      const lv2n = norm(lv2);
       hits = hits.filter(i => norm(file2.rows[i][lkCol2b]) === lv2n);
     }
 
